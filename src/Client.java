@@ -1,6 +1,5 @@
 import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
-import jxl.Sheet;
-import jxl.Workbook;
+import jxl.*;
 import jxl.read.biff.BiffException;
 import jxl.write.Label;
 import jxl.write.WritableSheet;
@@ -10,11 +9,10 @@ import jxl.write.WriteException;
 import java.io.*;
 import java.net.*;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Scanner;
+import java.util.*;
 
 public class Client {
     public static final String IP_ADDR = "169.254.151.243";//服务器地址
@@ -98,9 +96,6 @@ public class Client {
         client.readExcel(file);
         client.start();
 
-//        String str="\r";
-//        System.out.println(client.StringToAsciiString(str));
-//        client.sendCommand("hello world");
     }
 
     public Date stringToDate(String time) throws ParseException {
@@ -121,19 +116,16 @@ public class Client {
             Sheet sheet = wb.getSheet(0);
             // sheet.getRows()返回该页的总行数
             for (int i = 1; i < sheet.getRows(); i++) {
-                Task task = new Task();
-                // sheet.getColumns()返回该页的总列数
-//                for (int j = 0; j < sheet.getColumns(); j++) {
-                String dateStr = sheet.getCell(0, i).getContents();
-                String command = sheet.getCell(1, i).getContents();
-                //如果出现空行了，就跳过后面的所有内容
-                if (dateStr==null||dateStr.equals("")||command==null||command.equals(""))
+                Cell cell=sheet.getCell(0,i);
+                if (cell.getType()!= CellType.DATE)
                     break;
-                task.setDate(stringToDate(dateStr));
+                DateCell dc= (DateCell) cell;
+                Date date = convertDate4JXL(dc.getDate());
+                String command = sheet.getCell(1, i).getContents();
+                task.setDate(date);
                 task.setCommand(command);
                 tasks.add(task);
-                System.out.println(dateStr + command);
-//                }
+                System.out.println(date + "\t"+command);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -160,5 +152,17 @@ public class Client {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public Date convertDate4JXL(Date jxlDate) throws ParseException {
+        if (jxlDate == null)
+            return null;
+        TimeZone gmt = TimeZone.getTimeZone("GMT");
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        dateFormat.setTimeZone(gmt);
+        String str = dateFormat.format(jxlDate);
+        TimeZone local = TimeZone.getDefault();
+        dateFormat.setTimeZone(local);
+        return dateFormat.parse(str);
     }
 }
